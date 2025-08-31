@@ -1,0 +1,264 @@
+/* Mini RPG UI – drop-in CSS
+   Tip: Update the CSS variables (e.g., --hp) via JS to reflect game state.
+   document.documentElement.style.setProperty('--hp', 42);
+*/
+
+/* Retro pixel font (optional) */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+:root{
+  /* Core palette */
+  --bg: #0b0e12;
+  --panel: #121820;
+  --panel-2: #0e131a;
+  --border: #233041;
+  --text: #e6edf3;
+  --muted: #9aa4af;
+  --accent: #8be9fd;
+  --accent-2: #50fa7b;
+  --warning: #f1fa8c;
+  --danger: #ff5555;
+
+  /* Scale & layout */
+  --scale: 3;              /* 2-5 looks good */
+  --tile-size: calc(16px * var(--scale));
+  --gap: 12px;
+  --radius: 10px;
+  --shadow: 0 4px 0 #0007;
+
+  /* Stats (set these from JS or inline on a container) */
+  --hp: 72;     --hp-max: 100;
+  --mp: 35;     --mp-max: 60;
+  --xp: 20;     --xp-max: 100;
+  --gold: 123;
+
+  /* Map grid (can tweak at runtime) */
+  --cols: 12;
+  --rows: 8;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  height: 100%;
+  background: radial-gradient(1200px 800px at 50% 10%, #111826 0%, #070a0f 55%, var(--bg) 100%);
+  color: var(--text);
+  font: 12px/1.45 "Press Start 2P", ui-monospace, monospace;
+  letter-spacing: .3px;
+}
+
+img, canvas { image-rendering: pixelated; }
+
+.game {
+  min-height: 100vh;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 240px 1fr 260px;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--gap);
+}
+
+/* Panels */
+.panel {
+  background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 3px #000, var(--shadow);
+  padding: 12px;
+}
+
+/* HUD (top bar) */
+.hud {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 360px 1fr 260px;
+  gap: var(--gap);
+  align-items: center;
+}
+.hud .brand { font-size: 13px; color: var(--accent); text-shadow: 0 0 8px #1d3d47; }
+.hud .stat-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+.hud .stat-label { color: var(--muted); font-size: 10px; }
+.hud .value-chip {
+  background: #0b0f16;
+  border: 2px solid var(--border);
+  padding: 6px 8px;
+  border-radius: 8px;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* Bars */
+.bar {
+  --value: 0; --max: 100; --color: #4caf50; --bg: #1a2230;
+  position: relative;
+  width: 100%;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  width: calc((var(--value) / var(--max)) * 100%);
+  background: linear-gradient(90deg, rgba(255,255,255,0.12) 0, transparent 20%),
+              var(--color);
+  background-size: 16px 100%, auto;
+  animation: flow 1s linear infinite;
+}
+@keyframes flow { to { background-position: -16px 0, 0 0; } }
+
+.hp-bar { --value: var(--hp); --max: var(--hp-max); --color: linear-gradient(90deg, #f66 0%, #d22 100%); }
+.mp-bar { --value: var(--mp); --max: var(--mp-max); --color: linear-gradient(90deg, #5aa9ff 0%, #2d67ff 100%); }
+.xp-bar { --value: var(--xp); --max: var(--xp-max); --color: linear-gradient(90deg, #7aff9c 0%, #29c76b 100%); }
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: linear-gradient(#1a2330, #121a25);
+  box-shadow: inset 0 0 0 3px #000, var(--shadow);
+  cursor: pointer;
+  user-select: none;
+  transform: translateY(0);
+  transition: transform .06s ease, filter .06s ease;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 3px #000, 0 2px 0 #0006; }
+.btn.primary { outline: 2px solid #2c7b8a; color: var(--accent); }
+.btn.warn { outline: 2px solid #6f6a1a; color: var(--warning); }
+.btn.danger { outline: 2px solid #6a1a1a; color: var(--danger); }
+
+/* Dialog */
+.dialog {
+  position: relative;
+  min-height: 80px;
+  line-height: 1.6;
+}
+.dialog .name {
+  position: absolute; top: -12px; left: 12px;
+  padding: 2px 6px; font-size: 10px;
+  background: #0e1520; border: 2px solid var(--border); border-radius: 6px;
+}
+.dialog .text { padding-top: 8px; }
+.cursor::after {
+  content: "▮";
+  margin-left: 6px;
+  animation: blink .8s steps(1,end) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Combat log / toast */
+.log { font-size: 10px; color: var(--muted); height: 100%; overflow: auto; }
+.toast {
+  position: absolute; pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: pop 800ms ease-out forwards;
+  white-space: nowrap;
+  text-shadow: 0 2px 0 #000;
+}
+.toast.hit { color: var(--danger); font-size: 16px; }
+.toast.crit { color: #ffb86c; font-size: 18px; }
+@keyframes pop {
+  0% { opacity: 0; transform: translate(-50%, -10%) scale(.9); }
+  10% { opacity: 1; transform: translate(-50%, -20%) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -80%) scale(1); }
+}
+
+/* Inventory */
+.inv-grid {
+  --cell: calc(16px * var(--scale));
+  display: grid;
+  grid-template-columns: repeat(4, var(--cell));
+  grid-auto-rows: var(--cell);
+  gap: 8px;
+}
+.slot {
+  position: relative;
+  background: #0b1018;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 3px #000;
+  display: grid; place-items: center;
+}
+.slot .qty {
+  position: absolute; bottom: 4px; right: 6px; font-size: 10px; color: var(--muted);
+}
+
+/* Map */
+.map {
+  position: relative;
+  width: calc(var(--cols) * var(--tile-size));
+  height: calc(var(--rows) * var(--tile-size));
+  background: #0c1219;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 3px #000, var(--shadow);
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--tile-size));
+  grid-auto-rows: var(--tile-size);
+}
+.tile { width: var(--tile-size); height: var(--tile-size); }
+.tile.grass { background: #1c4020; }
+.tile.path  { background: #6b5b43; }
+.tile.water { background: #0d2c59; }
+.tile.wall  { background: #2a2f3a; }
+
+/* Sprites (placeholder blocks, swap with <img> or background-image) */
+.sprite {
+  width: var(--tile-size); height: var(--tile-size);
+  position: absolute; top: 0; left: 0;
+  will-change: transform;
+  image-rendering: pixelated;
+}
+.player { background: #3ec1d3; animation: bob 900ms ease-in-out infinite; }
+.npc     { background: #f6ab6c; animation: bob 1100ms ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-2px); } }
+
+/* Hit flash */
+.hitflash { position: relative; }
+.hitflash::after{
+  content:""; position:absolute; inset:0; background: rgba(255,255,255,.6);
+  mix-blend-mode: screen; opacity:0; animation: flash 250ms ease-out;
+}
+@keyframes flash { 0% {opacity: .9;} 100% {opacity: 0;} }
+
+/* Menu list */
+.menu { display: grid; gap: 8px; }
+.menu .item {
+  padding: 8px 10px; border: 2px solid var(--border); border-radius: 8px;
+  background: #0e1520; box-shadow: inset 0 0 0 3px #000;
+}
+.menu .item.is-active { outline: 2px solid #2f7c9c; color: var(--accent); }
+
+/* Footer */
+.footer {
+  grid-column: 1 / -1;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10px; color: var(--muted);
+}
+
+/* CRT overlay (toggle with .crt on .game) */
+.crt {
+  position: relative;
+}
+.crt::after{
+  content:""; pointer-events:none; position:absolute; inset:0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.02), rgba(255,255,255,.02) 1px, transparent 2px, transparent 4px),
+    radial-gradient(1600px 500px at 50% -40%, rgba(255,255,255,.10), transparent);
+  mix-blend-mode: overlay;
+}
+
+/* Responsive */
+@media (max-width: 1100px){
+  .game { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto; }
+  .hud { grid-template-columns: 1fr; }
+  .map { margin-inline: auto; }
+}
